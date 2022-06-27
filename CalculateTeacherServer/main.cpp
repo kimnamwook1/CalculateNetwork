@@ -1,5 +1,4 @@
 #define _CRT_SECURE_NO_WARNINGS
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
 
 #include <stdio.h>
 #include <WinSock2.h>
@@ -18,44 +17,60 @@ int main()
 	SOCKADDR_IN ServerAddrIn;
 	memset(&ServerAddrIn, 0, sizeof(SOCKADDR_IN));
 	ServerAddrIn.sin_family = PF_INET;
-	ServerAddrIn.sin_addr.s_addr = inet_addr("127.0.0.1");
+	ServerAddrIn.sin_addr.s_addr = INADDR_ANY;
 	ServerAddrIn.sin_port = htons(1234);
 
-	printf("client\n");
+	bind(ServerSocket, (SOCKADDR*)&ServerAddrIn, sizeof(SOCKADDR_IN));
 
-	char Buffer1[1024] = { 0, };
-	char Buffer2[1024] = { 0, };
+	listen(ServerSocket, 0);
 
-	scanf("%s", &Buffer1);
-	scanf("%s", &Buffer2);
+	SOCKADDR_IN ClientAddrIn;
+	memset(&ClientAddrIn, 0, sizeof(SOCKADDR_IN));
+	int ClientAddrInSize = sizeof(SOCKADDR_IN);
 
-	connect(ServerSocket, (SOCKADDR*)&ServerAddrIn, sizeof(SOCKADDR_IN));
+	printf("Server\n");
 
-	send(ServerSocket, Buffer1, strlen(Buffer1), 0);
-	send(ServerSocket, Buffer2, strlen(Buffer2), 0);
-
-	char Buffer3[1024] = { 0, };
-	int RecvLength = 0;
-	int TotalRecvLength = 0;
-	do
+	while (1)
 	{
-		RecvLength = recv(ServerSocket, &Buffer3[TotalRecvLength], sizeof(Buffer3) - TotalRecvLength, 0);  // 16바이트 다 받았냐?
-		TotalRecvLength += RecvLength;
-	} while (TotalRecvLength < 16);
+		SOCKET ClientSocket = accept(ServerSocket, (SOCKADDR*)&ClientAddrIn, &ClientAddrInSize);
+		printf("connected\n");
 
-	int Number3 = 0;
-	int Number4 = 0;
-	int Number5 = 0;
-	int Number6 = 0;
-	memcpy(&Number3, Buffer3, 4);
-	memcpy(&Number4, &Buffer3[4], 4);
-	memcpy(&Number5, &Buffer3[8], 4);
-	memcpy(&Number6, &Buffer3[12], 4);
+		char Buffer1[1024] = { 0, };
+		int RecvLength = 0;
+		int TotalRecvLength = 0;
+		do
+		{
+			RecvLength = recv(ClientSocket, &Buffer1[TotalRecvLength], sizeof(Buffer1) - TotalRecvLength, 0);  // 16바이트 다 받았냐?
+			printf("RecvLength : %d\n", RecvLength);
+			TotalRecvLength += RecvLength;
+		} while (TotalRecvLength < 8);
 
-	printf("%d\n", Number3);
-	printf("%d\n", Number4);
-	printf("%d\n", Number5);
-	printf("%d\n", Number6);
+		int Number1 = 0;
+		int Number2 = 0;
+		memcpy(&Number1, &Buffer1[0], 4);
+		memcpy(&Number2, &Buffer1[4], 4);
+
+		int Number3 = Number1 + Number2;
+		int Number4 = Number1 - Number2;
+		int Number5 = Number1 * Number2;
+		int Number6 = Number1 / Number2;
+
+		char Buffer3[1024] = { 0, };
+
+		memcpy(Buffer3, &Number3, 4);
+		memcpy(&Buffer3[4], &Number4, 4);
+		memcpy(&Buffer3[8], &Number5, 4);
+		memcpy(&Buffer3[12], &Number6, 4);
+
+		for (int i = 0; i < 16; ++i)
+		{
+			int SendLength = send(ClientSocket, &Buffer3[i], 1, 0);
+		}
+
+		closesocket(ClientSocket);
+	}
+
+	closesocket(ServerSocket);
 
 
 	WSACleanup();
